@@ -1,6 +1,6 @@
-message_log = [{"role": "user", "content": "你好！"}]
 import openai
 import streamlit as st
+from message_log import message_log
 api_key = "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"
 openai.api_key = api_key
 def generate_response(message_log):
