@@ -1,38 +1,49 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
+message_log = [{"role": "user", "content": "你好！"}]
+import openai
 import streamlit as st
+api_key = "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"
+openai.api_key = api_key
+def generate_response(message_log):
+    # Use OpenAI's ChatCompletion API to get the chatbot's response
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # The name of the OpenAI chatbot model to use
+        messages=message_log,   # The conversation history up to this point, as a list of dictionaries
+        # max_tokens=4096,        # The maximum number of tokens (words or subwords) in the generated response
+        # stop=None,              # The stopping sequence for the generated response, if any (not used here)
+        temperature=0.7,        # The "creativity" of the generated response (higher temperature = more creative)
+    )
 
-"""
-# Welcome to Streamlit!
+    # Find the first response from the chatbot that has text in it (some responses may not have text)
+    for choice in response.choices:
+        if "text" in choice:
+            return choice.text
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+    # If no response with text is found, return the first response's content (which may be empty)
+    return response.choices[0].message.content
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+st.markdown("# gpt-3.5-turbo")
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+if 'generated' not in st.session_state:
+    st.session_state['generated'] = []
+if 'past' not in st.session_state:
+    st.session_state['past'] = []
+user_input=st.text_area("You:",key='input')
 
 
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
+if user_input:
+    # print(message_log)
+    message_log.append({"role": "user", "content": user_input})
+    output=generate_response(message_log)
+    message_log.append({"role": "assistant", "content": output})
+    #store the output
+    st.session_state['past'].append(user_input)
+    st.session_state['generated'].append(output)
 
-    Point = namedtuple('Point', 'x y')
-    data = []
+if st.session_state['generated']:
+    for i in range(len(st.session_state['generated'])-1, -1, -1):
+        # message(st.session_state["generated"][i], key=str(i))
+        st.markdown(f'''**AI:** {st.session_state["generated"][i]}''')
+        # message(st.session_state['past'][i], is_user=True, key=str(i) + '_user')
+        st.markdown(f'''**You:** {st.session_state['past'][i]}''')
 
-    points_per_turn = total_points / num_turns
 
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
-
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
